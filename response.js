@@ -34,13 +34,6 @@ const formatFreeDate = (value) => {
   }).format(freeDate);
 };
 
-const buildMessagesLink = (url) => {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const separator = isIOS ? "&" : "?";
-  return `sms:${separator}body=${encodeURIComponent(url)}`;
-};
-
 if (isReplyView) {
   form.hidden = true;
   const message = params.get("message") || "";
@@ -83,7 +76,7 @@ form.addEventListener("submit", (event) => {
   replyLink.select();
 });
 
-document.querySelector("#send-reply").addEventListener("click", () => {
+document.querySelector("#send-reply").addEventListener("click", async () => {
   const url = replyLink.value.trim();
 
   if (!url) {
@@ -91,6 +84,19 @@ document.querySelector("#send-reply").addEventListener("click", () => {
     return;
   }
 
-  replyStatus.textContent = `opening Messages for ${to}…`;
-  window.location.href = buildMessagesLink(url);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "date reply", url });
+      replyStatus.textContent = "shared";
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        replyStatus.textContent = "couldn’t open sharing — copy the link above";
+      }
+    }
+    return;
+  }
+
+  replyLink.focus();
+  replyLink.select();
+  replyStatus.textContent = `copy this link and send it to ${to}`;
 });

@@ -53,13 +53,6 @@ function buildLink() {
   return url.href;
 }
 
-function buildMessagesLink(url) {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const separator = isIOS ? "&" : "?";
-  return `sms:${separator}body=${encodeURIComponent(url)}`;
-}
-
 function isPhoneLikeDevice() {
   return window.matchMedia("(max-width: 760px) and (pointer: coarse)").matches
     || navigator.standalone === true;
@@ -68,19 +61,46 @@ function isPhoneLikeDevice() {
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const url = buildLink();
-  const smsUrl = buildMessagesLink(url);
   shareLink.value = url;
   previewLink.href = url;
-  messagesLink.href = smsUrl;
   result.hidden = false;
-  copyStatus.textContent = isPhoneLikeDevice() ? "opening Messages…" : "";
+  copyStatus.textContent = "";
 
-  if (isPhoneLikeDevice()) {
-    window.location.href = smsUrl;
+  if (isPhoneLikeDevice() && navigator.share) {
+    navigator.share({ title: "date invite", url }).catch((error) => {
+      if (error.name !== "AbortError") {
+        copyStatus.textContent = "couldn’t open sharing — copy the link instead";
+      }
+    });
   } else {
     shareLink.focus();
     shareLink.select();
   }
+});
+
+messagesLink.addEventListener("click", async () => {
+  const url = shareLink.value.trim();
+
+  if (!url) {
+    copyStatus.textContent = "make the invite first";
+    return;
+  }
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "date invite", url });
+      copyStatus.textContent = "shared";
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        copyStatus.textContent = "couldn’t open sharing — copy the link instead";
+      }
+    }
+    return;
+  }
+
+  shareLink.focus();
+  shareLink.select();
+  copyStatus.textContent = "copy the link above to share it";
 });
 
 copyButton.addEventListener("click", async () => {
