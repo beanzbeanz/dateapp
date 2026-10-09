@@ -133,11 +133,8 @@ if (validDate) {
     "END:VCALENDAR"
   ].join("\r\n");
 
-  const blob = new Blob([calendar], { type: "text/calendar;charset=utf-8" });
-  const calendarUrl = URL.createObjectURL(blob);
-  calendarLink.href = calendarUrl;
+  calendarLink.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(calendar)}`;
   calendarLink.download = `${config.title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "date"}.ics`;
-  window.addEventListener("pagehide", () => URL.revokeObjectURL(calendarUrl), { once: true });
 } else {
   calendarLink.hidden = true;
 }
