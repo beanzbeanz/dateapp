@@ -2,6 +2,7 @@ const form = document.querySelector("#setup-form");
 const result = document.querySelector("#link-result");
 const shareLink = document.querySelector("#share-link");
 const previewLink = document.querySelector("#preview-link");
+const messagesLink = document.querySelector("#messages-link");
 const copyButton = document.querySelector("#copy-link");
 const copyStatus = document.querySelector("#copy-status");
 const modeSelect = document.querySelector("#mode");
@@ -52,15 +53,34 @@ function buildLink() {
   return url.href;
 }
 
+function buildMessagesLink(url) {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const separator = isIOS ? "&" : "?";
+  return `sms:${separator}body=${encodeURIComponent(url)}`;
+}
+
+function isPhoneLikeDevice() {
+  return window.matchMedia("(max-width: 760px) and (pointer: coarse)").matches
+    || navigator.standalone === true;
+}
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const url = buildLink();
+  const smsUrl = buildMessagesLink(url);
   shareLink.value = url;
   previewLink.href = url;
+  messagesLink.href = smsUrl;
   result.hidden = false;
-  copyStatus.textContent = "";
-  shareLink.focus();
-  shareLink.select();
+  copyStatus.textContent = isPhoneLikeDevice() ? "opening Messages…" : "";
+
+  if (isPhoneLikeDevice()) {
+    window.location.href = smsUrl;
+  } else {
+    shareLink.focus();
+    shareLink.select();
+  }
 });
 
 copyButton.addEventListener("click", async () => {

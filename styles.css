@@ -354,7 +354,8 @@ footer { margin-top: 6rem; padding: 1.5rem; text-align: center; color: var(--mut
 .link-result label { display: block; margin-bottom: 0.5rem; color: var(--berry); font-size: 0.78rem; font-weight: 700; }
 .link-row { display: flex; gap: 0.65rem; }
 .link-row input { min-width: 0; flex: 1; padding: 0.75rem; border: 1px solid #edcfda; border-radius: 10px; font: 0.82rem var(--sans); }
-.result-actions { display: flex; gap: 0.75rem; margin-top: 0.8rem; align-items: center; }
+.result-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.8rem; align-items: center; }
+.messages-link { min-height: 44px; padding: 0.68rem 0.9rem; text-decoration: none; }
 .preview-link { color: var(--berry); font-size: 0.86rem; font-weight: 700; }
 
 /* Response builder and reply page */
@@ -379,6 +380,8 @@ footer { margin-top: 6rem; padding: 1.5rem; text-align: center; color: var(--mut
   .field-wide { grid-column: auto; }
   .setup-form .button { grid-column: auto; width: 100%; }
   .link-row { flex-direction: column; }
+  .result-actions { align-items: stretch; flex-direction: column; }
+  .messages-link { width: 100%; }
   .response-form .button { width: 100%; }
 }
 
