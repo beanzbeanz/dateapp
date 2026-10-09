@@ -58,49 +58,26 @@ function isPhoneLikeDevice() {
     || navigator.standalone === true;
 }
 
+function buildMessagesLink(url) {
+  return `sms:&body=${encodeURIComponent(url)}`;
+}
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const url = buildLink();
+  const messagesUrl = buildMessagesLink(url);
   shareLink.value = url;
   previewLink.href = url;
+  messagesLink.href = messagesUrl;
   result.hidden = false;
   copyStatus.textContent = "";
 
-  if (isPhoneLikeDevice() && navigator.share) {
-    navigator.share({ title: "date invite", url }).catch((error) => {
-      if (error.name !== "AbortError") {
-        copyStatus.textContent = "couldn’t open sharing — copy the link instead";
-      }
-    });
+  if (isPhoneLikeDevice()) {
+    window.location.href = messagesUrl;
   } else {
     shareLink.focus();
     shareLink.select();
   }
-});
-
-messagesLink.addEventListener("click", async () => {
-  const url = shareLink.value.trim();
-
-  if (!url) {
-    copyStatus.textContent = "make the invite first";
-    return;
-  }
-
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: "date invite", url });
-      copyStatus.textContent = "shared";
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        copyStatus.textContent = "couldn’t open sharing — copy the link instead";
-      }
-    }
-    return;
-  }
-
-  shareLink.focus();
-  shareLink.select();
-  copyStatus.textContent = "copy the link above to share it";
 });
 
 copyButton.addEventListener("click", async () => {

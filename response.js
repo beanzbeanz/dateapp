@@ -18,7 +18,7 @@ const freeDateInput = document.querySelector("#free-date");
 const replyResult = document.querySelector("#reply-result");
 const replyLink = document.querySelector("#reply-link");
 const previewReply = document.querySelector("#preview-reply");
-const replyStatus = document.querySelector("#reply-status");
+const sendReply = document.querySelector("#send-reply");
 
 if (answer === "no") {
   rescheduleField.hidden = false;
@@ -33,6 +33,8 @@ const formatFreeDate = (value) => {
     day: "numeric"
   }).format(freeDate);
 };
+
+const buildMessagesLink = (url) => `sms:&body=${encodeURIComponent(url)}`;
 
 if (isReplyView) {
   form.hidden = true;
@@ -71,32 +73,8 @@ form.addEventListener("submit", (event) => {
 
   replyLink.value = url.href;
   previewReply.href = url.href;
+  sendReply.href = buildMessagesLink(url.href);
   replyResult.hidden = false;
   replyLink.focus();
   replyLink.select();
-});
-
-document.querySelector("#send-reply").addEventListener("click", async () => {
-  const url = replyLink.value.trim();
-
-  if (!url) {
-    replyStatus.textContent = "make the reply first";
-    return;
-  }
-
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: "date reply", url });
-      replyStatus.textContent = "shared";
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        replyStatus.textContent = "couldn’t open sharing — copy the link above";
-      }
-    }
-    return;
-  }
-
-  replyLink.focus();
-  replyLink.select();
-  replyStatus.textContent = `copy this link and send it to ${to}`;
 });
