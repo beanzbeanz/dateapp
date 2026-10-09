@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fff7fa" />
+    <meta name="description" content="A reply to a date plan." />
+    <title>date reply</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="response-page">
+      <div class="response-shell">
+        <section class="card response-card" aria-labelledby="response-heading">
+          <p class="eyebrow response-from" data-response-from></p>
+          <h1 id="response-heading" data-response-heading>Yes!!!</h1>
+          <p class="response-reference">re: <span data-original-title></span></p>
+
+          <form class="response-form" id="response-form">
+            <div class="field" data-reschedule-field hidden>
+              <label for="free-date">I’m free</label>
+              <input id="free-date" name="free" type="date" />
+            </div>
+            <div class="field">
+              <label for="message">Message (optional)</label>
+              <textarea id="message" name="message"></textarea>
+            </div>
+            <button class="button button-primary" type="submit">make reply</button>
+          </form>
+
+          <p class="response-free" data-response-free hidden></p>
+          <p class="response-message" data-response-message hidden></p>
+
+          <div class="reply-result" id="reply-result" hidden>
+            <label for="reply-link">send this back</label>
+            <div class="link-row">
+              <input id="reply-link" readonly />
+              <button class="button button-secondary" id="send-reply" type="button">open Messages</button>
+            </div>
+            <div class="result-actions">
+              <a class="preview-link" id="preview-reply" href="response.html" target="_blank" rel="noopener">preview</a>
+              <span class="reply-status" id="reply-status" aria-live="polite"></span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <script src="response.js"></script>
+  </body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fff7fa" />
+    <meta name="description" content="Tonight's plan for Kalilu." />
+    <title>hey kalilu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="petal-field" aria-hidden="true"></div>
+
+    <nav class="site-toolbar" aria-label="Date options">
+      <a class="setup-date-link" data-reply-link href="setup.html">set up a date</a>
+    </nav>
+
+    <main>
+      <section class="hero" aria-labelledby="plan-title">
+        <p class="top-note">hey <span data-her-name>kalilu</span></p>
+
+        <div class="card invitation-card">
+          <div class="stamp" aria-hidden="true">♥</div>
+          <p class="eyebrow plan-label">the plan</p>
+          <h1 id="plan-title" data-plan-title>dinner and a movie</h1>
+          <p class="plan-note" data-plan-note hidden></p>
+
+          <div class="date-ticket" aria-label="Date details">
+            <div>
+              <span class="detail-label">Day</span>
+              <strong data-day>Saturday</strong>
+            </div>
+            <div>
+              <span class="detail-label">Date</span>
+              <strong data-date>October 24</strong>
+            </div>
+            <div>
+              <span class="detail-label">Time</span>
+              <strong data-time>7:00 PM</strong>
+            </div>
+          </div>
+
+          <div class="location" data-location-wrap hidden>
+            <span class="detail-label">Location</span>
+            <strong data-location></strong>
+          </div>
+
+          <a class="calendar-button" data-calendar download="date.ics" href="#">add to calendar</a>
+
+          <div class="response-box">
+            <span class="detail-label">Are you in?</span>
+            <div class="response-actions">
+              <button class="button button-primary" data-response="yes" type="button">yes</button>
+              <button class="button button-secondary" data-response="no" type="button">no</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <section class="date-history section-shell" aria-labelledby="history-title">
+        <div class="section-heading">
+          <p class="eyebrow">date history</p>
+          <h2 id="history-title">previous dates</h2>
+        </div>
+
+        <div class="history-empty">
+          <figure class="tonight-photo">
+            <img src="assets/us-tonight.jpg" alt="Us together in bed with the cat" />
+            <figcaption>us tn</figcaption>
+          </figure>
+          <div class="empty-copy">
+            <span class="empty-count">0</span>
+            <p>none yet.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="countdown-section section-shell" aria-labelledby="countdown-title">
+        <div class="countdown-copy">
+          <p class="eyebrow">Counting down</p>
+          <h2 id="countdown-title">until the date</h2>
+        </div>
+        <div class="countdown" aria-live="polite">
+          <div><strong id="days">00</strong><span>days</span></div>
+          <div><strong id="hours">00</strong><span>hours</span></div>
+          <div><strong id="minutes">00</strong><span>minutes</span></div>
+          <div><strong id="seconds">00</strong><span>seconds</span></div>
+        </div>
+        <p class="countdown-fallback" id="countdown-fallback" hidden>It’s date time! ♥</p>
+      </section>
+
+    </main>
+
+    <footer>from <span data-your-name>nicky</span> <span aria-hidden="true">♡</span></footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
