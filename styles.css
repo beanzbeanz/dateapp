@@ -303,8 +303,8 @@ footer { margin-top: 6rem; padding: 1.5rem; text-align: center; color: var(--mut
 .setup-page { min-height: 100svh; padding: 3rem 1.25rem; }
 .setup-shell { width: min(760px, 100%); margin: 0 auto; }
 .setup-card { padding: clamp(1.4rem, 5vw, 3rem); text-align: left; border-radius: 24px; }
-.setup-form { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
-.field { display: grid; gap: 0.45rem; }
+.setup-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.1rem; }
+.field { min-width: 0; display: grid; gap: 0.45rem; }
 .field-wide { grid-column: 1 / -1; }
 .field label { color: var(--berry); font-size: 0.78rem; font-weight: 700; }
 .person-field { margin: 0 0 0.25rem; padding: 0; border: 0; }
@@ -326,6 +326,8 @@ footer { margin-top: 6rem; padding: 1.5rem; text-align: center; color: var(--mut
 .person-picker input:checked + label { color: var(--white); background: var(--berry); border-color: var(--berry); }
 .person-picker input:focus-visible + label { outline: 3px solid rgba(237, 125, 165, 0.36); outline-offset: 3px; }
 .field input, .field textarea, .field select {
+  min-width: 0;
+  max-width: 100%;
   width: 100%;
   padding: 0.9rem 1rem;
   color: var(--ink);
@@ -333,6 +335,17 @@ footer { margin-top: 6rem; padding: 1.5rem; text-align: center; color: var(--mut
   border: 1px solid #edcfda;
   border-radius: 12px;
   font: 500 1rem var(--sans);
+}
+.field input[type="date"], .field input[type="time"] {
+  min-height: 52px;
+  display: block;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.field input[type="date"]::-webkit-date-and-time-value,
+.field input[type="time"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
 }
 .field textarea { min-height: 100px; resize: vertical; }
 .field input:focus, .field textarea:focus, .field select:focus { outline: 3px solid rgba(237, 125, 165, 0.25); border-color: var(--rose); }
@@ -360,7 +373,9 @@ footer { margin-top: 6rem; padding: 1.5rem; text-align: center; color: var(--mut
 .reply-status { color: var(--muted); font-size: 0.76rem; }
 
 @media (max-width: 600px) {
-  .setup-form { grid-template-columns: 1fr; }
+  .setup-page { padding-inline: 0.75rem; }
+  .setup-card { min-width: 0; padding-inline: 1rem; }
+  .setup-form { min-width: 0; grid-template-columns: minmax(0, 1fr); }
   .field-wide { grid-column: auto; }
   .setup-form .button { grid-column: auto; width: 100%; }
   .link-row { flex-direction: column; }
