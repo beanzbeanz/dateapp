@@ -34,6 +34,13 @@ const formatFreeDate = (value) => {
   }).format(freeDate);
 };
 
+const buildMessagesLink = (url) => {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const separator = isIOS ? "&" : "?";
+  return `sms:${separator}body=${encodeURIComponent(url)}`;
+};
+
 if (isReplyView) {
   form.hidden = true;
   const message = params.get("message") || "";
@@ -76,25 +83,14 @@ form.addEventListener("submit", (event) => {
   replyLink.select();
 });
 
-const fallbackCopy = (text) => {
-  const copyArea = document.createElement("textarea");
-  copyArea.value = text;
-  copyArea.setAttribute("readonly", "");
-  copyArea.style.position = "fixed";
-  copyArea.style.opacity = "0";
-  document.body.appendChild(copyArea);
-  copyArea.select();
-  document.execCommand("copy");
-  copyArea.remove();
-};
+document.querySelector("#send-reply").addEventListener("click", () => {
+  const url = replyLink.value.trim();
 
-document.querySelector("#send-reply").addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(replyLink.value);
-  } catch {
-    fallbackCopy(replyLink.value);
+  if (!url) {
+    replyStatus.textContent = "make the reply first";
+    return;
   }
 
-  replyStatus.textContent = `copied — paste it to ${to}`;
-  setTimeout(() => { window.location.href = "sms:"; }, 250);
+  replyStatus.textContent = `opening Messages for ${to}…`;
+  window.location.href = buildMessagesLink(url);
 });
