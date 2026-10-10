@@ -38,6 +38,16 @@
               <input id="time" name="time" type="time" required />
             </div>
             <div class="field">
+              <label for="duration">Length</label>
+              <select id="duration" name="duration">
+                <option value="1">1 hour</option>
+                <option value="1.5">1½ hours</option>
+                <option value="2" selected>2 hours</option>
+                <option value="3">3 hours</option>
+                <option value="4">4 hours</option>
+              </select>
+            </div>
+            <div class="field">
               <label for="mode">Where</label>
               <select id="mode" name="mode">
                 <option value="in-person">In person</option>
@@ -53,6 +63,7 @@
               <textarea id="note" name="note"></textarea>
             </div>
             <button class="button button-primary" type="submit">send invite</button>
+            <p class="form-status field-wide" id="form-status" aria-live="polite"></p>
           </form>
 
           <div class="link-result" id="link-result" hidden>
@@ -71,6 +82,8 @@
 
       </div>
     </main>
+    <script src="supabase-config.js"></script>
+    <script src="shared-data.js"></script>
     <script src="setup.js"></script>
   </body>
 </html>

@@ -4,6 +4,7 @@ const from = params.get("from") || "kalilu";
 const to = params.get("to") || "nick";
 const planTitle = params.get("title") || "the date";
 const originalDate = params.get("date") || "";
+const eventId = params.get("event") || "";
 const isReplyView = params.get("view") === "1";
 
 const heading = answer === "yes" ? "Yes!!!" : "Maybe another time";
@@ -54,7 +55,7 @@ if (isReplyView) {
   }
 }
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(form);
   const url = new URL("response.html", window.location.href);
@@ -65,16 +66,37 @@ form.addEventListener("submit", (event) => {
   url.searchParams.set("to", to);
   url.searchParams.set("title", planTitle);
   if (originalDate) url.searchParams.set("date", originalDate);
+  if (eventId) url.searchParams.set("event", eventId);
 
   for (const [key, value] of data.entries()) {
     const cleanValue = String(value).trim();
     if (cleanValue) url.searchParams.set(key, cleanValue);
   }
 
-  replyLink.value = url.href;
-  previewReply.href = url.href;
-  sendReply.href = buildMessagesLink(url.href);
-  replyResult.hidden = false;
-  replyLink.focus();
-  replyLink.select();
+  const message = String(data.get("message") || "").trim();
+  const submitButton = form.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = "saving…";
+
+  try {
+    if (eventId && window.DateAppData?.enabled) {
+      await window.DateAppData.updateDate(eventId, {
+        status: answer === "yes" ? "accepted" : "declined",
+        response_message: message
+      });
+    }
+
+    replyLink.value = url.href;
+    previewReply.href = url.href;
+    sendReply.href = buildMessagesLink(url.href);
+    replyResult.hidden = false;
+    replyLink.focus();
+    replyLink.select();
+  } catch (error) {
+    console.error(error);
+    document.querySelector("#reply-status").textContent = "Couldn’t save the response. Try again.";
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "make reply";
+  }
 });

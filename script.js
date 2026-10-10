@@ -8,6 +8,7 @@ const invite = {
   yourName: "nick",
   title: "dinner and a movie",
   dateTime: "2026-10-24T19:00:00",
+  duration: 2,
   mode: "in-person",
   location: "",
   note: ""
@@ -20,10 +21,12 @@ const config = {
   yourName: params.get("from") || invite.yourName,
   title: params.get("title") || invite.title,
   dateTime: params.get("date") || invite.dateTime,
+  duration: Number(params.get("duration")) || invite.duration,
   mode: params.get("mode") || invite.mode,
   location: params.get("location") || invite.location,
   note: params.get("note") || invite.note
 };
+const eventId = params.get("event") || "";
 
 const replyUrl = new URL("setup.html", window.location.href);
 replyUrl.search = "";
@@ -87,6 +90,7 @@ function openResponsePage(answer) {
   responseUrl.searchParams.set("to", config.yourName);
   responseUrl.searchParams.set("title", config.title);
   responseUrl.searchParams.set("date", config.dateTime);
+  if (eventId) responseUrl.searchParams.set("event", eventId);
   window.location.href = responseUrl.href;
 }
 
@@ -116,7 +120,7 @@ const escapeCalendarText = (value) => String(value || "")
 const calendarLink = document.querySelector("[data-calendar]");
 
 if (validDate) {
-  const endDate = new Date(date.getTime() + (2 * 60 * 60 * 1000));
+  const endDate = new Date(date.getTime() + (config.duration * 60 * 60 * 1000));
   const calendar = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -138,3 +142,105 @@ if (validDate) {
 } else {
   calendarLink.hidden = true;
 }
+
+const historyList = document.querySelector("#history-list");
+const historyStatus = document.querySelector("#history-status");
+const historyExample = document.querySelector("[data-history-example]");
+
+const formatHistoryDate = (value) => new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric"
+}).format(new Date(value));
+
+function createHistoryCard(item) {
+  const card = document.createElement("article");
+  card.className = "history-card";
+
+  const media = document.createElement("div");
+  media.className = "history-photo history-photo-upload";
+
+  if (item.photo_url) {
+    const image = document.createElement("img");
+    image.src = item.photo_url;
+    image.alt = `Photo from ${item.title}`;
+    media.appendChild(image);
+  } else {
+    const prompt = document.createElement("span");
+    prompt.textContent = "add a photo";
+    media.appendChild(prompt);
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.setAttribute("capture", "environment");
+    input.setAttribute("aria-label", `Add a photo from ${item.title}`);
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 8 * 1024 * 1024) {
+        historyStatus.textContent = "That photo is over 8 MB. Choose a smaller one.";
+        input.value = "";
+        return;
+      }
+
+      historyStatus.textContent = "uploading photo…";
+      input.disabled = true;
+      try {
+        const photoUrl = await window.DateAppData.uploadDatePhoto(item.id, file);
+        await window.DateAppData.updateDate(item.id, { photo_url: photoUrl });
+        item.photo_url = photoUrl;
+        historyStatus.textContent = "photo added";
+        card.replaceWith(createHistoryCard(item));
+      } catch (error) {
+        console.error(error);
+        historyStatus.textContent = "Couldn’t upload that photo. Try again.";
+        input.disabled = false;
+      }
+    });
+    media.appendChild(input);
+  }
+
+  const copy = document.createElement("div");
+  copy.className = "history-card-copy";
+  const title = document.createElement("h3");
+  title.textContent = item.title;
+  const details = document.createElement("p");
+  details.textContent = [formatHistoryDate(item.starts_at), item.location].filter(Boolean).join(" · ");
+  copy.append(title, details);
+
+  if (item.response_message) {
+    const message = document.createElement("small");
+    message.textContent = item.response_message;
+    copy.appendChild(message);
+  }
+
+  card.append(media, copy);
+  return card;
+}
+
+async function loadDateHistory() {
+  if (!window.DateAppData?.enabled) return;
+
+  historyStatus.textContent = "loading dates…";
+  try {
+    const items = await window.DateAppData.listDates();
+    const previousDates = items
+      .filter((item) => item.status === "accepted" && new Date(item.ends_at).getTime() <= Date.now())
+      .sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at));
+
+    if (!previousDates.length) {
+      historyStatus.textContent = "none yet — the card above is an example";
+      return;
+    }
+
+    historyExample.remove();
+    historyList.replaceChildren(...previousDates.map(createHistoryCard));
+    historyStatus.textContent = `${previousDates.length} previous ${previousDates.length === 1 ? "date" : "dates"}`;
+  } catch (error) {
+    console.error(error);
+    historyStatus.textContent = "Couldn’t load previous dates right now.";
+  }
+}
+
+loadDateHistory();

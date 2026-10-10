@@ -80,16 +80,21 @@
           <h2 id="history-title">previous dates</h2>
         </div>
 
-        <div class="history-empty">
-          <figure class="tonight-photo">
-            <img src="assets/us-tonight.jpg" alt="Us together in bed with the cat" />
-            <figcaption>us tn</figcaption>
-          </figure>
-          <div class="empty-copy">
-            <span class="empty-count">0</span>
-            <p>none yet.</p>
-          </div>
+        <div class="history-list" id="history-list">
+          <article class="history-card history-example" data-history-example>
+            <figure class="history-photo">
+              <img src="assets/us-tonight.jpg" alt="Us together in bed with the cat" />
+              <figcaption>us tn</figcaption>
+            </figure>
+            <div class="history-card-copy">
+              <span class="history-badge">example</span>
+              <h3>movie night</h3>
+              <p>October 3 · at home</p>
+              <small>After a date, its photo and details will show up here.</small>
+            </div>
+          </article>
         </div>
+        <p class="history-status" id="history-status" aria-live="polite"></p>
       </section>
 
       <section class="countdown-section section-shell" aria-labelledby="countdown-title">
@@ -110,6 +115,8 @@
 
     <footer>from <span data-your-name>nicky</span> <span aria-hidden="true">♡</span></footer>
 
+    <script src="supabase-config.js"></script>
+    <script src="shared-data.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
