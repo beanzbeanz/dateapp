@@ -28,14 +28,16 @@
     <div class="petal-field" aria-hidden="true"></div>
 
     <nav class="site-toolbar" aria-label="Date options">
-      <a class="setup-date-link" data-reply-link href="setup.html">set up a date</a>
+      <a class="setup-date-link" data-setup-link href="setup.html">set up a date</a>
     </nav>
 
     <main>
       <section class="hero" aria-labelledby="plan-title">
         <p class="top-note">hey <span data-her-name>kalilu</span></p>
 
-        <div class="card invitation-card">
+        <p class="plan-loading" data-plan-loading aria-live="polite">checking upcoming plans…</p>
+
+        <div class="card invitation-card" data-plan-card hidden>
           <div class="stamp" aria-hidden="true">♥</div>
           <p class="eyebrow plan-label">the plan</p>
           <h1 id="plan-title" data-plan-title>dinner and a movie</h1>
@@ -63,7 +65,9 @@
 
           <a class="calendar-button" data-calendar download="date.ics" href="#">add to calendar</a>
 
-          <div class="response-box">
+          <p class="plan-status" data-plan-status hidden></p>
+
+          <div class="response-box" data-response-box>
             <span class="detail-label">Are you in?</span>
             <div class="response-actions">
               <button class="button button-primary" data-response="yes" type="button">yes</button>
@@ -72,6 +76,18 @@
           </div>
 
         </div>
+
+        <div class="empty-plan card" data-empty-plan hidden>
+          <p class="eyebrow">upcoming plans</p>
+          <h1>no upcoming plans :(</h1>
+          <a class="button button-primary empty-setup-button" data-setup-link href="setup.html">set up a date</a>
+        </div>
+
+        <section class="more-upcoming" data-more-upcoming hidden aria-labelledby="more-upcoming-title">
+          <p class="eyebrow">after that</p>
+          <h2 id="more-upcoming-title">more upcoming plans</h2>
+          <div class="upcoming-list" data-upcoming-list></div>
+        </section>
       </section>
 
       <section class="date-history section-shell" aria-labelledby="history-title">
@@ -81,23 +97,14 @@
         </div>
 
         <div class="history-list" id="history-list">
-          <article class="history-card history-example" data-history-example>
-            <figure class="history-photo">
-              <img src="assets/us-tonight.jpg" alt="Us together in bed with the cat" />
-              <figcaption>us tn</figcaption>
-            </figure>
-            <div class="history-card-copy">
-              <span class="history-badge">example</span>
-              <h3>movie night</h3>
-              <p>October 3 · at home</p>
-              <small>After a date, its photo and details will show up here.</small>
-            </div>
-          </article>
+          <div class="history-empty-state" data-history-empty>
+            <p>nothing here yet :(</p>
+          </div>
         </div>
         <p class="history-status" id="history-status" aria-live="polite"></p>
       </section>
 
-      <section class="countdown-section section-shell" aria-labelledby="countdown-title">
+      <section class="countdown-section section-shell" data-countdown-section hidden aria-labelledby="countdown-title">
         <div class="countdown-copy">
           <p class="eyebrow">Counting down</p>
           <h2 id="countdown-title">until the date</h2>

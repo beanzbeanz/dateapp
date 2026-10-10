@@ -14,9 +14,11 @@ const invite = {
   note: ""
 };
 
-// setup.html generates this customized link for you.
+// setup.html generates customized invite links. Without invite parameters, the
+// home page becomes a shared view of the next real plan in Supabase.
 const params = new URLSearchParams(window.location.search);
-const config = {
+const hasInviteParams = ["event", "title", "date"].some((name) => params.has(name));
+let config = {
   herName: params.get("her") || invite.herName,
   yourName: params.get("from") || invite.yourName,
   title: params.get("title") || invite.title,
@@ -26,77 +28,23 @@ const config = {
   location: params.get("location") || invite.location,
   note: params.get("note") || invite.note
 };
-const eventId = params.get("event") || "";
-
-const replyUrl = new URL("setup.html", window.location.href);
-replyUrl.search = "";
-const replySetter = config.herName.trim().toLowerCase() === "nick" ? "nick" : "kalilu";
-replyUrl.searchParams.set("by", replySetter);
-document.querySelector("[data-reply-link]").href = replyUrl.href;
-
-const date = new Date(config.dateTime);
-const validDate = !Number.isNaN(date.getTime());
-const dayText = validDate ? new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date) : "our special day";
-const dateText = validDate ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" }).format(date) : "very soon";
-const timeText = validDate ? new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date) : "the perfect time";
+let eventId = params.get("event") || "";
+let planDate = new Date(config.dateTime);
+let validDate = false;
+let countdownTimer;
 
 const fill = (selector, value) => document.querySelectorAll(selector).forEach((el) => { el.textContent = value; });
-fill("[data-her-name]", config.herName);
-fill("[data-your-name]", config.yourName);
-fill("[data-plan-title]", config.title);
-fill("[data-day]", dayText);
-fill("[data-date]", dateText);
-fill("[data-time]", timeText);
-
-if (config.note) {
-  fill("[data-plan-note]", config.note);
-  document.querySelector("[data-plan-note]").hidden = false;
-}
-
-const locationText = config.mode === "remote"
-  ? (config.location ? `Remote — ${config.location}` : "Remote")
-  : config.location;
-
-if (locationText) {
-  fill("[data-location]", locationText);
-  document.querySelector("[data-location-wrap]").hidden = false;
-}
-
 const pad = (number) => String(number).padStart(2, "0");
+const planCard = document.querySelector("[data-plan-card]");
+const emptyPlan = document.querySelector("[data-empty-plan]");
+const planLoading = document.querySelector("[data-plan-loading]");
+const countdownSection = document.querySelector("[data-countdown-section]");
 const countdown = document.querySelector(".countdown");
 const countdownFallback = document.querySelector("#countdown-fallback");
-
-function updateCountdown() {
-  if (!validDate) return;
-  const difference = date.getTime() - Date.now();
-  if (difference <= 0) {
-    countdown.hidden = true;
-    countdownFallback.hidden = false;
-    return;
-  }
-  document.querySelector("#days").textContent = pad(Math.floor(difference / 86400000));
-  document.querySelector("#hours").textContent = pad(Math.floor((difference / 3600000) % 24));
-  document.querySelector("#minutes").textContent = pad(Math.floor((difference / 60000) % 60));
-  document.querySelector("#seconds").textContent = pad(Math.floor((difference / 1000) % 60));
-}
-
-updateCountdown();
-setInterval(updateCountdown, 1000);
-
-function openResponsePage(answer) {
-  const responseUrl = new URL("response.html", window.location.href);
-  responseUrl.searchParams.set("answer", answer);
-  responseUrl.searchParams.set("from", config.herName);
-  responseUrl.searchParams.set("to", config.yourName);
-  responseUrl.searchParams.set("title", config.title);
-  responseUrl.searchParams.set("date", config.dateTime);
-  if (eventId) responseUrl.searchParams.set("event", eventId);
-  window.location.href = responseUrl.href;
-}
-
-document.querySelectorAll("[data-response]").forEach((button) => {
-  button.addEventListener("click", () => openResponsePage(button.dataset.response));
-});
+const calendarLink = document.querySelector("[data-calendar]");
+const responseBox = document.querySelector("[data-response-box]");
+const planStatus = document.querySelector("[data-plan-status]");
+const toolbar = document.querySelector(".site-toolbar");
 
 const formatCalendarDate = (value) => {
   const parts = [
@@ -117,18 +65,45 @@ const escapeCalendarText = (value) => String(value || "")
   .replaceAll(",", "\\,")
   .replaceAll(";", "\\;");
 
-const calendarLink = document.querySelector("[data-calendar]");
+function updateSetupLinks(person = config.herName) {
+  const replyUrl = new URL("setup.html", window.location.href);
+  replyUrl.search = "";
+  const setter = person.trim().toLowerCase() === "nick" ? "nick" : "kalilu";
+  replyUrl.searchParams.set("by", setter);
+  document.querySelectorAll("[data-setup-link]").forEach((link) => { link.href = replyUrl.href; });
+}
 
-if (validDate) {
-  const endDate = new Date(date.getTime() + (config.duration * 60 * 60 * 1000));
+function updateCountdown() {
+  if (!validDate) return;
+  const difference = planDate.getTime() - Date.now();
+  if (difference <= 0) {
+    countdown.hidden = true;
+    countdownFallback.hidden = false;
+    return;
+  }
+  countdown.hidden = false;
+  countdownFallback.hidden = true;
+  document.querySelector("#days").textContent = pad(Math.floor(difference / 86400000));
+  document.querySelector("#hours").textContent = pad(Math.floor((difference / 3600000) % 24));
+  document.querySelector("#minutes").textContent = pad(Math.floor((difference / 60000) % 60));
+  document.querySelector("#seconds").textContent = pad(Math.floor((difference / 1000) % 60));
+}
+
+function updateCalendar(locationText) {
+  if (!validDate) {
+    calendarLink.hidden = true;
+    return;
+  }
+
+  const endDate = new Date(planDate.getTime() + (config.duration * 60 * 60 * 1000));
   const calendar = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Our Date//EN",
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
-    `UID:${date.getTime()}@our-date`,
-    `DTSTART:${formatCalendarDate(date)}`,
+    `UID:${planDate.getTime()}@our-date`,
+    `DTSTART:${formatCalendarDate(planDate)}`,
     `DTEND:${formatCalendarDate(endDate)}`,
     `SUMMARY:${escapeCalendarText(config.title)}`,
     `DESCRIPTION:${escapeCalendarText(config.note)}`,
@@ -139,13 +114,151 @@ if (validDate) {
 
   calendarLink.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(calendar)}`;
   calendarLink.download = `${config.title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "date"}.ics`;
+  calendarLink.hidden = false;
+}
+
+function renderPlan(nextConfig, nextEventId = "", status = "proposed", isInvite = false) {
+  config = nextConfig;
+  eventId = nextEventId;
+  planDate = new Date(config.dateTime);
+  validDate = !Number.isNaN(planDate.getTime());
+
+  const dayText = validDate ? new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(planDate) : "our special day";
+  const dateText = validDate ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" }).format(planDate) : "very soon";
+  const timeText = validDate ? new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(planDate) : "the perfect time";
+
+  fill("[data-her-name]", config.herName);
+  fill("[data-your-name]", config.yourName);
+  fill("[data-plan-title]", config.title);
+  fill("[data-day]", dayText);
+  fill("[data-date]", dateText);
+  fill("[data-time]", timeText);
+  document.querySelector(".plan-label").textContent = isInvite ? "the plan" : "next up";
+
+  const note = document.querySelector("[data-plan-note]");
+  note.textContent = config.note || "";
+  note.hidden = !config.note;
+
+  const locationText = config.mode === "remote"
+    ? (config.location ? `Remote — ${config.location}` : "Remote")
+    : config.location;
+  fill("[data-location]", locationText);
+  document.querySelector("[data-location-wrap]").hidden = !locationText;
+
+  responseBox.hidden = !isInvite && status !== "proposed";
+  planStatus.textContent = status === "accepted" ? "accepted ♡" : "";
+  planStatus.hidden = status !== "accepted";
+  updateSetupLinks(config.herName);
+  updateCalendar(locationText);
+
+  planLoading.hidden = true;
+  emptyPlan.hidden = true;
+  planCard.hidden = false;
+  countdownSection.hidden = !validDate;
+  toolbar.hidden = false;
+  toolbar.classList.toggle("is-secondary", !isInvite);
+
+  clearInterval(countdownTimer);
+  updateCountdown();
+  countdownTimer = setInterval(updateCountdown, 1000);
+}
+
+function showEmptyPlan() {
+  planLoading.hidden = true;
+  planCard.hidden = true;
+  emptyPlan.hidden = false;
+  countdownSection.hidden = true;
+  toolbar.hidden = true;
+  updateSetupLinks("nick");
+}
+
+function createUpcomingItem(item) {
+  const card = document.createElement("article");
+  card.className = "upcoming-item";
+  const copy = document.createElement("div");
+  const title = document.createElement("h3");
+  title.textContent = item.title;
+  const details = document.createElement("p");
+  const startsAt = new Date(item.starts_at);
+  details.textContent = [
+    new Intl.DateTimeFormat("en-US", { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(startsAt),
+    item.mode === "remote" ? "remote" : item.location
+  ].filter(Boolean).join(" · ");
+  const status = document.createElement("span");
+  status.textContent = item.status;
+  copy.append(title, details);
+  card.append(copy, status);
+  return card;
+}
+
+function renderMoreUpcoming(items) {
+  const section = document.querySelector("[data-more-upcoming]");
+  if (!items.length) {
+    section.hidden = true;
+    return;
+  }
+  document.querySelector("[data-upcoming-list]").replaceChildren(...items.map(createUpcomingItem));
+  section.hidden = false;
+}
+
+async function loadUpcomingPlans() {
+  if (!window.DateAppData?.enabled) {
+    showEmptyPlan();
+    return;
+  }
+
+  try {
+    const items = await window.DateAppData.listDates();
+    const upcoming = items
+      .filter((item) => ["proposed", "accepted"].includes(item.status) && new Date(item.ends_at).getTime() > Date.now())
+      .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+
+    if (!upcoming.length) {
+      showEmptyPlan();
+      return;
+    }
+
+    const next = upcoming[0];
+    renderPlan({
+      herName: next.recipient,
+      yourName: next.proposer,
+      title: next.title,
+      dateTime: next.starts_at,
+      duration: Math.max(0.5, (new Date(next.ends_at) - new Date(next.starts_at)) / 3600000),
+      mode: next.mode,
+      location: next.location,
+      note: next.note
+    }, next.id, next.status, false);
+    renderMoreUpcoming(upcoming.slice(1));
+  } catch (error) {
+    console.error(error);
+    showEmptyPlan();
+  }
+}
+
+function openResponsePage(answer) {
+  const responseUrl = new URL("response.html", window.location.href);
+  responseUrl.searchParams.set("answer", answer);
+  responseUrl.searchParams.set("from", config.herName);
+  responseUrl.searchParams.set("to", config.yourName);
+  responseUrl.searchParams.set("title", config.title);
+  responseUrl.searchParams.set("date", config.dateTime);
+  if (eventId) responseUrl.searchParams.set("event", eventId);
+  window.location.href = responseUrl.href;
+}
+
+document.querySelectorAll("[data-response]").forEach((button) => {
+  button.addEventListener("click", () => openResponsePage(button.dataset.response));
+});
+
+if (hasInviteParams) {
+  renderPlan(config, eventId, "proposed", true);
 } else {
-  calendarLink.hidden = true;
+  loadUpcomingPlans();
 }
 
 const historyList = document.querySelector("#history-list");
 const historyStatus = document.querySelector("#history-status");
-const historyExample = document.querySelector("[data-history-example]");
 
 const formatHistoryDate = (value) => new Intl.DateTimeFormat("en-US", {
   month: "long",
@@ -230,11 +343,10 @@ async function loadDateHistory() {
       .sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at));
 
     if (!previousDates.length) {
-      historyStatus.textContent = "none yet — the card above is an example";
+      historyStatus.textContent = "";
       return;
     }
 
-    historyExample.remove();
     historyList.replaceChildren(...previousDates.map(createHistoryCard));
     historyStatus.textContent = `${previousDates.length} previous ${previousDates.length === 1 ? "date" : "dates"}`;
   } catch (error) {
