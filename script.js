@@ -95,7 +95,6 @@ function renderPlan(nextConfig, nextEventId = "", status = "proposed", isInvite 
   const timeText = validDate ? new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(planDate) : "the perfect time";
 
   fill("[data-her-name]", config.herName);
-  fill("[data-your-name]", config.yourName);
   fill("[data-plan-title]", config.title);
   fill("[data-day]", dayText);
   fill("[data-date]", dateText);
