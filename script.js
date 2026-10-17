@@ -281,13 +281,14 @@ function createHistoryCard(item) {
   } else {
     const prompt = document.createElement("span");
     prompt.textContent = "add a photo";
-    media.appendChild(prompt);
+    const photoOptions = document.createElement("small");
+    photoOptions.textContent = "library or camera";
+    media.append(prompt, photoOptions);
 
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
-    input.setAttribute("capture", "environment");
-    input.setAttribute("aria-label", `Add a photo from ${item.title}`);
+    input.setAttribute("aria-label", `Choose a photo from your library or camera for ${item.title}`);
     input.addEventListener("change", async () => {
       const file = input.files?.[0];
       if (!file) return;
