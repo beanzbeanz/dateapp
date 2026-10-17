@@ -270,7 +270,7 @@ function createHistoryCard(item) {
   const card = document.createElement("article");
   card.className = "history-card";
 
-  const media = document.createElement("div");
+  const media = document.createElement(item.photo_url ? "div" : "button");
   media.className = "history-photo history-photo-upload";
 
   if (item.photo_url) {
@@ -284,35 +284,9 @@ function createHistoryCard(item) {
     const photoOptions = document.createElement("small");
     photoOptions.textContent = "library or camera";
     media.append(prompt, photoOptions);
-
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.setAttribute("aria-label", `Choose a photo from your library or camera for ${item.title}`);
-    input.addEventListener("change", async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      if (file.size > 8 * 1024 * 1024) {
-        historyStatus.textContent = "That photo is over 8 MB. Choose a smaller one.";
-        input.value = "";
-        return;
-      }
-
-      historyStatus.textContent = "uploading photo…";
-      input.disabled = true;
-      try {
-        const photoUrl = await window.DateAppData.uploadDatePhoto(item.id, file);
-        await window.DateAppData.updateDate(item.id, { photo_url: photoUrl });
-        item.photo_url = photoUrl;
-        historyStatus.textContent = "photo added";
-        card.replaceWith(createHistoryCard(item));
-      } catch (error) {
-        console.error(error);
-        historyStatus.textContent = "Couldn’t upload that photo. Try again.";
-        input.disabled = false;
-      }
-    });
-    media.appendChild(input);
+    media.type = "button";
+    media.setAttribute("aria-label", `Add a photo for ${item.title}`);
+    media.addEventListener("click", () => openPhotoChooser(item, card));
   }
 
   const copy = document.createElement("div");
@@ -331,6 +305,91 @@ function createHistoryCard(item) {
 
   card.append(media, copy);
   return card;
+}
+
+function openPhotoChooser(item, card) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "photo-chooser-backdrop";
+  backdrop.setAttribute("role", "presentation");
+
+  const sheet = document.createElement("div");
+  sheet.className = "photo-chooser";
+  sheet.setAttribute("role", "dialog");
+  sheet.setAttribute("aria-modal", "true");
+  sheet.setAttribute("aria-labelledby", "photo-chooser-title");
+
+  const heading = document.createElement("p");
+  heading.id = "photo-chooser-title";
+  heading.textContent = "Add a photo";
+
+  const close = () => {
+    document.removeEventListener("keydown", onKeydown);
+    backdrop.remove();
+  };
+
+  const upload = async (input) => {
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      historyStatus.textContent = "That photo is over 8 MB. Choose a smaller one.";
+      input.value = "";
+      return;
+    }
+
+    historyStatus.textContent = "uploading photo…";
+    sheet.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    try {
+      const photoUrl = await window.DateAppData.uploadDatePhoto(item.id, file);
+      await window.DateAppData.updateDate(item.id, { photo_url: photoUrl });
+      item.photo_url = photoUrl;
+      historyStatus.textContent = "photo added";
+      close();
+      card.replaceWith(createHistoryCard(item));
+    } catch (error) {
+      console.error(error);
+      historyStatus.textContent = "Couldn’t upload that photo. Try again.";
+      sheet.querySelectorAll("button").forEach((button) => { button.disabled = false; });
+    }
+  };
+
+  const makeChoice = (label, capture) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.hidden = true;
+    if (capture) input.setAttribute("capture", "environment");
+    input.addEventListener("change", () => upload(input));
+
+    button.addEventListener("click", () => input.click());
+    sheet.append(button, input);
+  };
+
+  sheet.appendChild(heading);
+  makeChoice("Take Photo", true);
+  makeChoice("Choose from Library", false);
+
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "photo-chooser-cancel";
+  cancel.textContent = "Cancel";
+  cancel.addEventListener("click", close);
+  sheet.appendChild(cancel);
+
+  const onKeydown = (event) => {
+    if (event.key === "Escape") close();
+  };
+  document.addEventListener("keydown", onKeydown);
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop) close();
+  });
+
+  backdrop.appendChild(sheet);
+  document.body.appendChild(backdrop);
+  cancel.focus();
 }
 
 async function loadDateHistory() {
