@@ -92,7 +92,7 @@ window.DateAppPhotos = (() => {
         save.textContent = "save photo";
         status.textContent = "Ready to save. Your existing photo stays until this one is saved.";
       } catch (error) {
-        status.textContent = error.message || "Couldn’t read that photo. Try choosing it from Files.";
+        status.textContent = error.message || "Couldn’t read that photo. Please try another.";
       } finally {
         setBusy(false);
       }
@@ -108,20 +108,14 @@ window.DateAppPhotos = (() => {
       input.setAttribute("aria-label", `${text} for ${item.title}`);
       input.addEventListener("change", pick);
       input.addEventListener("cancel", () => {
-        status.textContent = pending ? "Your preview is still ready to save." : "No photo selected. If Photos returns nothing, try a picture saved in Files → On My iPhone.";
+        status.textContent = pending ? "Your preview is still ready to save." : "No photo selected.";
       });
       inputs.push(input);
       label.append(caption, input);
       return label;
     };
     panel.append(makeInput(item.photo_url ? "replace photo" : "add a photo", "image/*"));
-    const fallback = document.createElement("details");
-    const summary = document.createElement("summary");
-    summary.textContent = "Photo picker not working?";
-    const help = document.createElement("p");
-    help.textContent = "In Photos, use Share → Save to Files → On My iPhone. Then choose that file below. You can also open this same date site in Safari to upload; saved photos appear here too.";
-    fallback.append(summary, help, makeInput("choose a file", ""));
-    panel.append(fallback, preview, actions, status);
+    panel.append(preview, actions, status);
     cancel.addEventListener("click", () => { reset(); status.textContent = "Photo selection cancelled."; });
     save.addEventListener("click", async () => {
       if (!pending || busy) return;
