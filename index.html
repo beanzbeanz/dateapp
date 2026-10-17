@@ -37,6 +37,8 @@
 
         <p class="plan-loading" data-plan-loading aria-live="polite">checking upcoming plans…</p>
 
+        <button class="button button-secondary" id="retry-plan" type="button" hidden>retry loading plans</button>
+
         <div class="card invitation-card" data-plan-card hidden>
           <div class="stamp" aria-hidden="true">♥</div>
           <p class="eyebrow plan-label">the plan</p>
@@ -66,6 +68,8 @@
           <a class="calendar-button" data-calendar download="date.ics" href="#">add to calendar</a>
 
           <p class="plan-status" data-plan-status hidden></p>
+          <p data-plan-reply hidden></p>
+          <a class="preview-link" id="edit-plan" hidden>edit / reschedule</a>
 
           <div class="response-box" data-response-box>
             <span class="detail-label">Are you in?</span>
@@ -87,9 +91,16 @@
           <p class="eyebrow">after that</p>
           <h2 id="more-upcoming-title">more upcoming plans</h2>
           <div class="upcoming-list" data-upcoming-list></div>
+          <button class="button button-secondary" id="more-upcoming" hidden>more plans</button>
         </section>
       </section>
 
+      <section class="section-shell" aria-labelledby="declined-title">
+        <h2 id="declined-title">plans to revisit</h2>
+        <div class="upcoming-list" id="declined-list"></div>
+        <p id="declined-status" role="status"></p>
+        <button class="button button-secondary" id="more-declined" hidden>more plans</button>
+      </section>
       <section class="date-history section-shell" aria-labelledby="history-title">
         <div class="section-heading">
           <p class="eyebrow">date history</p>
@@ -102,6 +113,7 @@
           </div>
         </div>
         <p class="history-status" id="history-status" aria-live="polite"></p>
+        <button class="button button-secondary" id="more-history" hidden>load older dates</button>
       </section>
 
       <section class="countdown-section section-shell" data-countdown-section hidden aria-labelledby="countdown-title">
@@ -109,7 +121,7 @@
           <p class="eyebrow">Counting down</p>
           <h2 id="countdown-title">until the date</h2>
         </div>
-        <div class="countdown" aria-live="polite">
+        <div class="countdown">
           <div><strong id="days">00</strong><span>days</span></div>
           <div><strong id="hours">00</strong><span>hours</span></div>
           <div><strong id="minutes">00</strong><span>minutes</span></div>
@@ -124,6 +136,8 @@
 
     <script src="supabase-config.js"></script>
     <script src="shared-data.js"></script>
+    <script src="common.js"></script>
+    <script src="photos.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

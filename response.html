@@ -19,9 +19,12 @@
           <h1 id="response-heading" data-response-heading>Yes!!!</h1>
           <p class="response-reference">re: <span data-original-title></span></p>
 
+          <a class="preview-link" id="back-plan" href="index.html">view plan</a>
+          <p id="reply-status" role="status"></p>
+          <button class="button button-secondary" id="retry-response" type="button" hidden>reload current plan</button>
           <form class="response-form" id="response-form">
             <div class="field" data-reschedule-field hidden>
-              <label for="free-date">I’m free</label>
+              <label for="free-date">I’m free (optional)</label>
               <input id="free-date" name="free" type="date" />
             </div>
             <div class="field">
@@ -42,7 +45,8 @@
             </div>
             <div class="result-actions">
               <a class="preview-link" id="preview-reply" href="response.html" target="_blank" rel="noopener">preview</a>
-              <span class="reply-status" id="reply-status" aria-live="polite"></span>
+              <button class="button button-secondary" id="copy-reply" type="button">copy link</button>
+              <button class="button button-secondary" id="share-reply" type="button" hidden>share</button>
             </div>
           </div>
         </section>
@@ -50,6 +54,7 @@
     </main>
     <script src="supabase-config.js"></script>
     <script src="shared-data.js"></script>
+    <script src="common.js"></script>
     <script src="response.js"></script>
   </body>
 </html>

@@ -46,25 +46,6 @@ const responseBox = document.querySelector("[data-response-box]");
 const planStatus = document.querySelector("[data-plan-status]");
 const toolbar = document.querySelector(".site-toolbar");
 
-const formatCalendarDate = (value) => {
-  const parts = [
-    value.getFullYear(),
-    pad(value.getMonth() + 1),
-    pad(value.getDate()),
-    "T",
-    pad(value.getHours()),
-    pad(value.getMinutes()),
-    "00"
-  ];
-  return parts.join("");
-};
-
-const escapeCalendarText = (value) => String(value || "")
-  .replaceAll("\\", "\\\\")
-  .replaceAll("\n", "\\n")
-  .replaceAll(",", "\\,")
-  .replaceAll(";", "\\;");
-
 function updateSetupLinks(person = config.herName) {
   const replyUrl = new URL("setup.html", window.location.href);
   replyUrl.search = "";
@@ -77,6 +58,7 @@ function updateCountdown() {
   if (!validDate) return;
   const difference = planDate.getTime() - Date.now();
   if (difference <= 0) {
+    clearInterval(countdownTimer);
     countdown.hidden = true;
     countdownFallback.hidden = false;
     return;
@@ -95,22 +77,7 @@ function updateCalendar(locationText) {
     return;
   }
 
-  const endDate = new Date(planDate.getTime() + (config.duration * 60 * 60 * 1000));
-  const calendar = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Our Date//EN",
-    "CALSCALE:GREGORIAN",
-    "BEGIN:VEVENT",
-    `UID:${planDate.getTime()}@our-date`,
-    `DTSTART:${formatCalendarDate(planDate)}`,
-    `DTEND:${formatCalendarDate(endDate)}`,
-    `SUMMARY:${escapeCalendarText(config.title)}`,
-    `DESCRIPTION:${escapeCalendarText(config.note)}`,
-    `LOCATION:${escapeCalendarText(locationText)}`,
-    "END:VEVENT",
-    "END:VCALENDAR"
-  ].join("\r\n");
+  const calendar = window.DateApp.calendar({ ...config, location: locationText }, eventId);
 
   calendarLink.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(calendar)}`;
   calendarLink.download = `${config.title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "date"}.ics`;
@@ -121,11 +88,11 @@ function renderPlan(nextConfig, nextEventId = "", status = "proposed", isInvite 
   config = nextConfig;
   eventId = nextEventId;
   planDate = new Date(config.dateTime);
-  validDate = !Number.isNaN(planDate.getTime());
+  validDate = Number.isFinite(planDate.getTime()) && Number.isFinite(config.duration) && config.duration > 0 && config.duration <= 48;
 
   const dayText = validDate ? new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(planDate) : "our special day";
   const dateText = validDate ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" }).format(planDate) : "very soon";
-  const timeText = validDate ? new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(planDate) : "the perfect time";
+  const timeText = validDate ? new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(planDate) : "the perfect time";
 
   fill("[data-her-name]", config.herName);
   fill("[data-your-name]", config.yourName);
@@ -145,9 +112,12 @@ function renderPlan(nextConfig, nextEventId = "", status = "proposed", isInvite 
   fill("[data-location]", locationText);
   document.querySelector("[data-location-wrap]").hidden = !locationText;
 
-  responseBox.hidden = !isInvite && status !== "proposed";
-  planStatus.textContent = status === "accepted" ? "accepted ♡" : "";
-  planStatus.hidden = status !== "accepted";
+  responseBox.hidden = status !== "proposed" || !validDate || planDate.getTime() <= Date.now();
+  planStatus.textContent = status === "accepted" ? "accepted ♡" : status === "declined" ? "another time?" : "awaiting a reply";
+  planStatus.hidden = false;
+  const editLink = document.querySelector("#edit-plan");
+  editLink.hidden = !eventId;
+  editLink.href = window.DateApp.link("setup.html", {event: eventId});
   updateSetupLinks(config.herName);
   updateCalendar(locationText);
 
@@ -160,7 +130,7 @@ function renderPlan(nextConfig, nextEventId = "", status = "proposed", isInvite 
 
   clearInterval(countdownTimer);
   updateCountdown();
-  countdownTimer = setInterval(updateCountdown, 1000);
+  if (validDate && planDate.getTime() > Date.now() && !document.hidden) countdownTimer = setInterval(updateCountdown, 1000);
 }
 
 function showEmptyPlan() {
@@ -177,7 +147,10 @@ function createUpcomingItem(item) {
   card.className = "upcoming-item";
   const copy = document.createElement("div");
   const title = document.createElement("h3");
-  title.textContent = item.title;
+  const link = document.createElement("a");
+  link.href = window.DateApp.link("index.html", {event: item.id});
+  link.textContent = item.title;
+  title.appendChild(link);
   const details = document.createElement("p");
   const startsAt = new Date(item.starts_at);
   details.textContent = [
@@ -187,6 +160,20 @@ function createUpcomingItem(item) {
   const status = document.createElement("span");
   status.textContent = item.status;
   copy.append(title, details);
+  if (item.alternative_date) {
+    const suggestion = document.createElement("p");
+    suggestion.textContent = `Suggested day: ${item.alternative_date}`;
+    copy.appendChild(suggestion);
+  }
+  if (item.response_message) {
+    const message = document.createElement("p");
+    message.textContent = item.response_message;
+    copy.appendChild(message);
+  }
+  const edit = document.createElement("a");
+  edit.href = window.DateApp.link("setup.html", {event: item.id});
+  edit.textContent = "edit / reschedule";
+  copy.appendChild(edit);
   card.append(copy, status);
   return card;
 }
@@ -201,40 +188,65 @@ function renderMoreUpcoming(items) {
   section.hidden = false;
 }
 
-async function loadUpcomingPlans() {
-  if (!window.DateAppData?.enabled) {
-    showEmptyPlan();
-    return;
+const retryPlan = document.querySelector("#retry-plan");
+const moreUpcoming = document.querySelector("#more-upcoming");
+let upcomingOffset = 0;
+let planBusy = false;
+function renderSavedPlan(row) {
+  renderPlan(window.DateApp.toConfig(row), row.id, row.status, hasInviteParams);
+  const reply = document.querySelector("[data-plan-reply]");
+  reply.textContent = [row.response_message, row.alternative_date ? `Suggested day: ${row.alternative_date}` : ""].filter(Boolean).join(" · ");
+  reply.hidden = !reply.textContent;
+  if (row.status === "declined") calendarLink.hidden = countdownSection.hidden = true;
+}
+async function loadUpcomingPlans(append = false) {
+  if (planBusy) return;
+  planBusy = true;
+  moreUpcoming.disabled = true;
+  retryPlan.hidden = true;
+  if (!append) {
+    planLoading.hidden = false;
+    planLoading.textContent = "checking upcoming plans…";
+    planCard.hidden = emptyPlan.hidden = true;
+    countdownSection.hidden = true;
+    clearInterval(countdownTimer);
   }
-
   try {
-    const items = await window.DateAppData.listDates();
-    const upcoming = items
-      .filter((item) => ["proposed", "accepted"].includes(item.status) && new Date(item.ends_at).getTime() > Date.now())
-      .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
-
-    if (!upcoming.length) {
-      showEmptyPlan();
-      return;
+    if (eventId && hasInviteParams) {
+      renderSavedPlan(await window.DateAppData.getDate(eventId));
+    } else if (hasInviteParams) {
+      renderPlan(config, "", "proposed", true);
+    } else {
+      if (!window.DateAppData.enabled) throw new Error("Shared dates aren’t connected. Check the app’s connection settings.");
+      const rows = await window.DateAppData.listUpcoming(append ? upcomingOffset : 0);
+      const page = rows.slice(0, 20);
+      if (!append) {
+        upcomingOffset = 0;
+        if (page.length) renderSavedPlan(page[0]); else showEmptyPlan();
+        renderMoreUpcoming(page.slice(1));
+      } else document.querySelector("[data-upcoming-list]").append(...page.map(createUpcomingItem));
+      upcomingOffset += page.length;
+      moreUpcoming.hidden = rows.length <= 20;
+      if (!moreUpcoming.hidden) document.querySelector("[data-more-upcoming]").hidden = false;
     }
-
-    const next = upcoming[0];
-    renderPlan({
-      herName: next.recipient,
-      yourName: next.proposer,
-      title: next.title,
-      dateTime: next.starts_at,
-      duration: Math.max(0.5, (new Date(next.ends_at) - new Date(next.starts_at)) / 3600000),
-      mode: next.mode,
-      location: next.location,
-      note: next.note
-    }, next.id, next.status, false);
-    renderMoreUpcoming(upcoming.slice(1));
   } catch (error) {
-    console.error(error);
-    showEmptyPlan();
+    planLoading.textContent = error.message || "Couldn’t load plans. Please retry.";
+    planLoading.hidden = false;
+    retryPlan.hidden = false;
+    retryPlan.onclick = () => loadUpcomingPlans(append);
+  } finally {
+    planBusy = false;
+    moreUpcoming.disabled = false;
   }
 }
+moreUpcoming.addEventListener("click", () => loadUpcomingPlans(true));
+document.addEventListener("visibilitychange", () => {
+  clearInterval(countdownTimer);
+  if (!document.hidden && validDate && !planCard.hidden) {
+    updateCountdown();
+    if (planDate.getTime() > Date.now()) countdownTimer = setInterval(updateCountdown, 1000);
+  }
+});
 
 function openResponsePage(answer) {
   const responseUrl = new URL("response.html", window.location.href);
@@ -251,11 +263,7 @@ document.querySelectorAll("[data-response]").forEach((button) => {
   button.addEventListener("click", () => openResponsePage(button.dataset.response));
 });
 
-if (hasInviteParams) {
-  renderPlan(config, eventId, "proposed", true);
-} else {
-  loadUpcomingPlans();
-}
+loadUpcomingPlans();
 
 const historyList = document.querySelector("#history-list");
 const historyStatus = document.querySelector("#history-status");
@@ -270,23 +278,17 @@ function createHistoryCard(item) {
   const card = document.createElement("article");
   card.className = "history-card";
 
-  const media = document.createElement(item.photo_url ? "div" : "button");
-  media.className = "history-photo history-photo-upload";
-
+  const media = document.createElement("div");
+  media.className = "history-photo";
   if (item.photo_url) {
     const image = document.createElement("img");
     image.src = item.photo_url;
     image.alt = `Photo from ${item.title}`;
+    image.loading = "lazy";
+    image.decoding = "async";
     media.appendChild(image);
   } else {
-    const prompt = document.createElement("span");
-    prompt.textContent = "add a photo";
-    const photoOptions = document.createElement("small");
-    photoOptions.textContent = "library or camera";
-    media.append(prompt, photoOptions);
-    media.type = "button";
-    media.setAttribute("aria-label", `Add a photo for ${item.title}`);
-    media.addEventListener("click", () => openPhotoChooser(item, card));
+    media.textContent = "a memory goes here ♡";
   }
 
   const copy = document.createElement("div");
@@ -303,116 +305,62 @@ function createHistoryCard(item) {
     copy.appendChild(message);
   }
 
+  copy.appendChild(window.DateAppPhotos.createEditor(item, () => {
+    card.replaceWith(createHistoryCard(item));
+    historyStatus.textContent = "photo saved";
+  }));
   card.append(media, copy);
   return card;
 }
 
-function openPhotoChooser(item, card) {
-  const backdrop = document.createElement("div");
-  backdrop.className = "photo-chooser-backdrop";
-  backdrop.setAttribute("role", "presentation");
-
-  const sheet = document.createElement("div");
-  sheet.className = "photo-chooser";
-  sheet.setAttribute("role", "dialog");
-  sheet.setAttribute("aria-modal", "true");
-  sheet.setAttribute("aria-labelledby", "photo-chooser-title");
-
-  const heading = document.createElement("p");
-  heading.id = "photo-chooser-title";
-  heading.textContent = "Add a photo";
-
-  const close = () => {
-    document.removeEventListener("keydown", onKeydown);
-    backdrop.remove();
-  };
-
-  const upload = async (input) => {
-    const file = input.files?.[0];
-    if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      historyStatus.textContent = "That photo is over 8 MB. Choose a smaller one.";
-      input.value = "";
-      return;
-    }
-
-    historyStatus.textContent = "uploading photo…";
-    sheet.querySelectorAll("button").forEach((button) => { button.disabled = true; });
-    try {
-      const photoUrl = await window.DateAppData.uploadDatePhoto(item.id, file);
-      await window.DateAppData.updateDate(item.id, { photo_url: photoUrl });
-      item.photo_url = photoUrl;
-      historyStatus.textContent = "photo added";
-      close();
-      card.replaceWith(createHistoryCard(item));
-    } catch (error) {
-      console.error(error);
-      historyStatus.textContent = "Couldn’t upload that photo. Try again.";
-      sheet.querySelectorAll("button").forEach((button) => { button.disabled = false; });
-    }
-  };
-
-  const makeChoice = (label, capture) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = label;
-
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.hidden = true;
-    if (capture) input.setAttribute("capture", "environment");
-    input.addEventListener("change", () => upload(input));
-
-    button.addEventListener("click", () => input.click());
-    sheet.append(button, input);
-  };
-
-  sheet.appendChild(heading);
-  makeChoice("Take Photo", true);
-  makeChoice("Choose from Library", false);
-
-  const cancel = document.createElement("button");
-  cancel.type = "button";
-  cancel.className = "photo-chooser-cancel";
-  cancel.textContent = "Cancel";
-  cancel.addEventListener("click", close);
-  sheet.appendChild(cancel);
-
-  const onKeydown = (event) => {
-    if (event.key === "Escape") close();
-  };
-  document.addEventListener("keydown", onKeydown);
-  backdrop.addEventListener("click", (event) => {
-    if (event.target === backdrop) close();
-  });
-
-  backdrop.appendChild(sheet);
-  document.body.appendChild(backdrop);
-  cancel.focus();
-}
-
+const moreHistory = document.querySelector("#more-history");
+let historyOffset = 0;
+const historyBefore = new Date().toISOString();
+let historyBusy = false;
 async function loadDateHistory() {
-  if (!window.DateAppData?.enabled) return;
-
+  if (historyBusy) return;
+  historyBusy = true;
+  moreHistory.disabled = true;
   historyStatus.textContent = "loading dates…";
   try {
-    const items = await window.DateAppData.listDates();
-    const previousDates = items
-      .filter((item) => item.status === "accepted" && new Date(item.ends_at).getTime() <= Date.now())
-      .sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at));
-
-    if (!previousDates.length) {
-      historyStatus.textContent = "";
-      return;
-    }
-
-    historyList.replaceChildren(...previousDates.map(createHistoryCard));
-    historyStatus.textContent = `${previousDates.length} previous ${previousDates.length === 1 ? "date" : "dates"}`;
+    const rows = await window.DateAppData.listHistory(historyOffset, historyBefore);
+    const page = rows.slice(0, 12);
+    if (!historyOffset) historyList.replaceChildren();
+    historyList.append(...page.map(createHistoryCard));
+    historyOffset += page.length;
+    historyStatus.textContent = historyOffset ? `${historyOffset} previous dates` : "No previous dates yet.";
+    moreHistory.hidden = rows.length <= 12;
+    moreHistory.textContent = "load older dates";
   } catch (error) {
-    console.error(error);
-    historyStatus.textContent = "Couldn’t load previous dates right now.";
-  }
+    historyStatus.textContent = error.message || "Couldn’t load previous dates.";
+    moreHistory.textContent = "retry history";
+    moreHistory.hidden = false;
+  } finally { historyBusy = false; moreHistory.disabled = false; }
 }
-
+moreHistory.addEventListener("click", loadDateHistory);
+let declinedOffset = 0;
+let declinedBusy = false;
+const moreDeclined = document.querySelector("#more-declined");
+async function loadDeclined() {
+  if (declinedBusy) return;
+  declinedBusy = true;
+  moreDeclined.disabled = true;
+  const status = document.querySelector("#declined-status");
+  status.textContent = "loading…";
+  try {
+    const rows = await window.DateAppData.listDeclined(declinedOffset);
+    const page = rows.slice(0, 12);
+    document.querySelector("#declined-list").append(...page.map(createUpcomingItem));
+    declinedOffset += page.length;
+    status.textContent = declinedOffset ? "Choose a plan to propose a new time." : "No plans waiting to be rescheduled.";
+    moreDeclined.hidden = rows.length <= 12;
+    moreDeclined.textContent = "more plans";
+  } catch (error) {
+    status.textContent = error.message;
+    moreDeclined.hidden = false;
+    moreDeclined.textContent = "retry";
+  } finally { declinedBusy = false; moreDeclined.disabled = false; }
+}
+moreDeclined.addEventListener("click", loadDeclined);
 loadDateHistory();
+loadDeclined();
